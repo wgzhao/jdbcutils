@@ -1,4 +1,4 @@
-package com.azsoftware.jdbc2csv;
+package com.cxzq.jdbcutil;
 
 import java.io.IOException;
 import java.sql.Connection;

@@ -1,4 +1,4 @@
-package com.azsoftware.jdbc2csv;
+package com.cxzq.jdbcutil;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
