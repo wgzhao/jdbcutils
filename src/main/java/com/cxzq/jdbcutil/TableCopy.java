@@ -3,7 +3,6 @@ package com.cxzq.jdbcutil;
 import cn.hutool.json.JSON;
 
 import java.io.File;
-import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
@@ -13,6 +12,7 @@ import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.sql.Types;
 import java.util.Objects;
 import java.util.Properties;
 import java.util.StringJoiner;
@@ -20,7 +20,24 @@ import java.util.StringJoiner;
 import static cn.hutool.json.JSONUtil.readJSON;
 
 public class TableCopy {
-    public static void main(String[] args) throws IOException {
+
+    /*
+     * 提取所有的字段名称，并按照逗号拼接
+     */
+    private static String getColumns(ResultSetMetaData rsmd)  {
+        StringJoiner joiner = new StringJoiner(",");
+        try {
+            for (int i = 1; i <= rsmd.getColumnCount(); i++) {
+                joiner.add(rsmd.getColumnName(i));
+            }
+            return joiner.toString();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    public static void main(String[] args) {
         if (args.length < 1) {
             System.out.println("json file missing");
             System.exit(1);
@@ -33,7 +50,8 @@ public class TableCopy {
 
         String srcJdbc = job.getByPath("src.jdbc", String.class);
         String destJdbc = job.getByPath("dest.jdbc", String.class);
-
+        String destTable = job.getByPath("dest.dbtable", String.class);
+        String mode = job.getByPath("dest.mode", String.class);
         destConnectProps.put("user", job.getByPath("dest.user", String.class));
         destConnectProps.put("password", job.getByPath("dest.password", String.class));
 
@@ -42,19 +60,24 @@ public class TableCopy {
 
         try {
             // source database
+            System.out.print("Connect source db with: " + srcJdbc);
             Connection srcConn = DriverManager.getConnection(srcJdbc, srcConnectProps);
+            System.out.println(" OK");
             Statement srcStmt = srcConn.createStatement();
 
             // destination database
+            System.out.print("Connect destination db with: " + destJdbc);
+            System.out.println(" OK");
             Connection destConn = DriverManager.getConnection(destJdbc, destConnectProps);
             Statement destStmt = destConn.createStatement();
 
-            if ("overwrite".equals(job.getByPath("dest.mode", String.class))) {
+            if ("overwrite".equals(mode)) {
                 destStmt.execute("truncate table " + job.getByPath("dest.dbtable", String.class));
             }
 
-            String insertSql = "insert into " + job.getByPath("dest.dbtable", String.class) + " values(";
-            StringJoiner joiner = new StringJoiner(",");
+            String insertSql = "insert into " + destTable;
+            StringJoiner joinerv = new StringJoiner(",");
+            StringJoiner joinerc = new StringJoiner(",");
 
             String query;
 
@@ -64,21 +87,40 @@ public class TableCopy {
                 query = job.getByPath("src.sql", String.class);
             }
 
+            System.out.print("Retrives source records");
+            srcStmt.setFetchSize(256);
             srcStmt.execute(query);
+            System.out.println(" OK");
             ResultSet resSet = srcStmt.getResultSet();
-            ResultSetMetaData md = resSet.getMetaData();
-            int colNum = md.getColumnCount();
-            for (int i = 0; i < colNum; i++) {
-                joiner.add("?");
+            ResultSetMetaData resMd = resSet.getMetaData();
+
+            // 获得目标表的结构
+            Statement stmt = destConn.createStatement();
+            String destSql = "select " + getColumns(resMd) + " from " + destTable + " where 1=2";
+//            System.out.printf("query destination table with SQL: %s\n", destSql);
+            stmt.execute(destSql);
+            ResultSet destSchema = stmt.getResultSet();
+            ResultSetMetaData destMd = destSchema.getMetaData();
+
+            int colNum = resMd.getColumnCount();
+            for (int i = 1; i <= colNum; i++) {
+//                System.out.printf("src type: %s dest type: %s%n", resMd.getColumnTypeName(i), destMd.getColumnTypeName(i));
+                joinerc.add(destMd.getColumnName(i));
+                joinerv.add("?");
             }
 
-            insertSql = insertSql + joiner.toString() + ")";
-
+            insertSql = insertSql + "(" + joinerc.toString() + ")values(" + joinerv.toString() + ")";
             PreparedStatement preparedStmt = destConn.prepareStatement(insertSql);
+
             int batchSize = 0;
+            System.out.print("Begin insert records");
             while (resSet.next()) {
                 for (int i = 1; i <= colNum; i++) {
-                    preparedStmt.setObject(i, resSet.getObject(i));
+                    if ("unknown".equals(resMd.getColumnTypeName(i))) {
+                        preparedStmt.setObject(i, resSet.getObject(i), Types.VARCHAR);
+                    } else {
+                        preparedStmt.setObject(i, resSet.getObject(i), resMd.getColumnType(i));
+                    }
                 }
                 preparedStmt.addBatch();
                 batchSize++;
@@ -89,13 +131,13 @@ public class TableCopy {
             }
             preparedStmt.executeBatch();
             destConn.commit();
+            System.out.println(" OK ");
             destConn.close();
             srcConn.close();
-
         } catch (SQLException ex) {
             System.err.println(ex.getMessage());
+            ex.printStackTrace();
             System.exit(1);
         }
-
     }
 }
