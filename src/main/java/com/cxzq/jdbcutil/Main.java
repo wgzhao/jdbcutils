@@ -36,7 +36,9 @@ public class Main {
           int columnsNumber = rsmd.getColumnCount();
             while (resSet.next()) {
               for(int i=1; i<= columnsNumber; i++) {
-                System.out.print(resSet.getString(i));
+                if (resSet.getString(i) != null) {
+                  System.out.print(resSet.getString(i));
+                }
               }
               System.out.println("");
             }
