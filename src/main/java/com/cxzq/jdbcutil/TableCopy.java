@@ -124,9 +124,10 @@ public class TableCopy {
                 }
                 preparedStmt.addBatch();
                 batchSize++;
-                if (batchSize % 1024 == 0) {
+                if (batchSize % 256 == 0) {
                     preparedStmt.executeBatch();
                     destConn.commit();
+                    preparedStmt.clearBatch();
                 }
             }
             preparedStmt.executeBatch();
