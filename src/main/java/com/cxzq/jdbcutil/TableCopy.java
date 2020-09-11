@@ -28,7 +28,7 @@ public class TableCopy {
         StringJoiner joiner = new StringJoiner(",");
         try {
             for (int i = 1; i <= rsmd.getColumnCount(); i++) {
-                joiner.add(rsmd.getColumnName(i));
+                joiner.add(rsmd.getColumnLabel(i));
             }
             return joiner.toString();
         } catch (SQLException e) {
@@ -97,7 +97,7 @@ public class TableCopy {
             // 获得目标表的结构
             Statement stmt = destConn.createStatement();
             String destSql = "select " + getColumns(resMd) + " from " + destTable + " where 1=2";
-//            System.out.printf("query destination table with SQL: %s\n", destSql);
+            System.out.printf("query destination table with SQL: %s\n", destSql);
             stmt.execute(destSql);
             ResultSet destSchema = stmt.getResultSet();
             ResultSetMetaData destMd = destSchema.getMetaData();
