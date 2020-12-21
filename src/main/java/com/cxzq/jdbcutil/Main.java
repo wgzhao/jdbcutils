@@ -1,6 +1,7 @@
 package com.cxzq.jdbcutil;
 
 import java.io.IOException;
+import java.sql.Clob;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
@@ -26,7 +27,7 @@ public class Main {
       connectProps.put("password", cli.getPassword());
       Connection conn = DriverManager.getConnection(cli.getJdbcUrl(), connectProps);
       Statement stmt = conn.createStatement();
-      ResultSet resSet = null;
+      ResultSet resSet;
       if (stmt.execute(cli.getQuery())) {
         resSet = stmt.getResultSet();
 
@@ -40,7 +41,7 @@ public class Main {
                   System.out.print(resSet.getString(i));
                 }
               }
-              System.out.println("");
+              System.out.println();
             }
         } else {
           CSVFormat csvFormat = cli.getCsvFormat();
@@ -48,7 +49,29 @@ public class Main {
             csvFormat.withHeader(resSet).print(System.out);
 
           CSVPrinter csvPrint = new CSVPrinter(System.out, csvFormat);
-          csvPrint.printRecords(resSet);
+          if (cli.trim()) {
+            int columnCount = resSet.getMetaData().getColumnCount();
+            StringBuilder sb = new StringBuilder();
+            while(resSet.next()) {
+              for(int i = 1; i <= columnCount; ++i) {
+                Object object = resSet.getObject(i);
+                String res;
+                if (object instanceof  Clob) {
+                  res = ((Clob)object).getCharacterStream().toString();
+                } else {
+                  res = object.toString();
+                }
+                sb.append(res.replace("\r","").replace("\n","").replace(",",":"));
+                if (i < columnCount) {
+                  sb.append(",");
+                }
+              }
+              System.out.println(sb.toString());
+//              csvPrint.println();
+            }
+          }else {
+            csvPrint.printRecords(resSet);
+          }
           csvPrint.flush();
           csvPrint.close();
         }

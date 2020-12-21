@@ -29,6 +29,9 @@ public class Cli {
   // print directly instead of csv
   private boolean isRaw = true;
 
+  // trim special symbil
+  private boolean trim = false;
+
   private Options options = new Options();
 
   private Option optionHelp = new Option("h", "help", false, "show this help, then exit");
@@ -66,6 +69,9 @@ public class Cli {
     .desc("password for user")
     .build(); 
 
+  private Option optionStrip = new Option("T", "trim", false, "trim new line and comma symbol, " +
+          "the \\r|\\n will be trimed  and comma (,) will be replaced by :");
+
   public Cli(String[] args) throws ParseException {
     options.addOption( optionHelp );
     options.addOption( optionHideHeaders );
@@ -73,12 +79,14 @@ public class Cli {
     options.addOption( optionCsvFormat );
     options.addOption( optionUser);
     options.addOption( optionPassword);
+    options.addOption( optionStrip);
 
     CommandLineParser parser = new DefaultParser();
     CommandLine cmd = parser.parse( options, args);
 
     if (cmd.hasOption("h")) {
       usage();
+      System.exit(1);
     } else {
       if (cmd.hasOption(optionCsvFormat.getOpt())) {
         isRaw = false;
@@ -119,6 +127,10 @@ public class Cli {
         System.err.println( String.format("Option --%s required", optionJdbcUrl.getLongOpt()) );
         System.exit(Main.exit_status_err);
       }
+
+      if (cmd.hasOption(optionStrip.getOpt())) {
+        trim = true;
+      }
     } // end else
   }
 
@@ -150,6 +162,8 @@ public class Cli {
   public boolean isRaw() {
     return isRaw;
   }
+
+  public boolean trim() { return trim; }
 
   public void usage() {
     System.out.println(
