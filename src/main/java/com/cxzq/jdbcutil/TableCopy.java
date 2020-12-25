@@ -76,6 +76,13 @@ public class TableCopy
                 e.printStackTrace();
                 System.exit(2);
             }
+        } else if (srcJdbc.contains("inceptor2")) {
+            try {
+                Class.forName("org.apache.hive.jdbc.HiveDriver");
+            } catch (ClassNotFoundException e) {
+                e.printStackTrace();
+                System.exit(3);
+            }
         }
         Connection srcConn = DriverManager.getConnection(srcJdbc, srcConnectProps);
         System.out.println(" OK");
