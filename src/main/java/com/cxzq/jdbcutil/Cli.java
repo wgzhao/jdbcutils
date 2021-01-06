@@ -29,26 +29,22 @@ public class Cli {
   // print directly instead of csv
   private boolean isRaw = true;
 
-  // trim special symbil
-  private boolean trim = false;
+  // trim special symbol
+  private boolean isTrim = false;
 
-  // trim for biaoqian
-  private boolean bq = false;
+  // 标签系统需要的格式
+  private boolean isBq = false;
 
-  private Options options = new Options();
+  private final Options options = new Options();
 
-  private Option optionHelp = new Option("h", "help", false, "show this help, then exit");
-
-  private Option optionHideHeaders = new Option("H", "hide-headers", false, "hide headers on output");
-
-  private Option optionJdbcUrl = Option.builder("U")
+  private final Option optionJdbcUrl = Option.builder("U")
       .longOpt("jdbc-url")
       .hasArg()
       .argName("URL STRING")
       .desc("JDBC driver connection URL string")
       .build();
 
-  private Option optionCsvFormat = Option.builder("f")
+  private final Option optionCsvFormat = Option.builder("f")
       .longOpt("csv-format")
       .hasArg()
       .argName("FORMAT")
@@ -58,29 +54,31 @@ public class Cli {
               "'https://javadoc.io/doc/org.apache.commons/commons-csv/latest/org/apache/commons/csv/CSVFormat.html'")
       .build();
 
-  private Option optionUser = Option.builder("u")
+  private final Option optionUser = Option.builder("u")
     .longOpt("user")
     .hasArg()
     .argName("User Name")
     .desc("user to connect")
     .build();
 
-  private Option optionPassword = Option.builder("p")
+  private final Option optionPassword = Option.builder("p")
     .longOpt("password")
     .hasArg()
     .argName("Password")
     .desc("password for user")
     .build(); 
 
-  private Option optionStrip = new Option("T", "trim", false, "trim new line and comma symbol, " +
+  private final Option optionStrip = new Option("T", "trim", false, "trim new line and comma symbol, " +
           "the \\r|\\n will be trimed  and comma (,) will be replaced by :, ONLY for jhxt");
 
-  private Option optionBq = new Option("B", "bq", false, "trim new line and symbol ^ ONLY for " +
+  private final Option optionBq = new Option("B", "bq", false, "trim new line and symbol ^ ONLY for " +
           "biaoqian");
 
   public Cli(String[] args) throws ParseException {
-    options.addOption( optionHelp );
-    options.addOption( optionHideHeaders );
+    Option optionHelp = new Option("h", "help", false, "show this help, then exit");
+    options.addOption(optionHelp);
+    Option optionHideHeaders = new Option("H", "hide-headers", false, "hide headers on output");
+    options.addOption(optionHideHeaders);
     options.addOption( optionJdbcUrl );
     options.addOption( optionCsvFormat );
     options.addOption( optionUser);
@@ -108,14 +106,14 @@ public class Cli {
         user = cmd.getOptionValue(optionUser.getOpt());
       }else {
         System.err.println( String.format("Option --%s required", optionUser.getLongOpt()) );
-        System.exit(Main.exit_status_err);
+        System.exit(Main.EXIT_STATUS_ERR);
       }
 
       if (cmd.hasOption(optionPassword.getOpt())) {
         password = cmd.getOptionValue(optionPassword.getOpt());
       } else {
         System.err.println( String.format("Option --%s required", optionPassword.getLongOpt()) );
-        System.exit(Main.exit_status_err);
+        System.exit(Main.EXIT_STATUS_ERR);
       }
 
       if (cmd.hasOption(optionJdbcUrl.getOpt())) {
@@ -128,18 +126,18 @@ public class Cli {
           query = cmd.getArgs()[0];
         } else {
           System.err.println( "Too many SQL" );
-          System.exit(Main.exit_status_err);
+          System.exit(Main.EXIT_STATUS_ERR);
         }
       } else {
         System.err.println( String.format("Option --%s required", optionJdbcUrl.getLongOpt()) );
-        System.exit(Main.exit_status_err);
+        System.exit(Main.EXIT_STATUS_ERR);
       }
 
       if (cmd.hasOption(optionStrip.getOpt())) {
-        trim = true;
+        isTrim = true;
       }
       if (cmd.hasOption(optionBq.getOpt())) {
-        bq = true;
+        isBq = true;
       }
     } // end else
   }
@@ -173,9 +171,9 @@ public class Cli {
     return isRaw;
   }
 
-  public boolean trim() { return trim; }
+  public boolean isTrim() { return isTrim; }
 
-  public boolean bq() {return bq; }
+  public boolean isBq() {return isBq; }
 
   public void usage() {
     System.out.println(
