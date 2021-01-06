@@ -32,6 +32,9 @@ public class Cli {
   // trim special symbil
   private boolean trim = false;
 
+  // trim for biaoqian
+  private boolean bq = false;
+
   private Options options = new Options();
 
   private Option optionHelp = new Option("h", "help", false, "show this help, then exit");
@@ -70,7 +73,10 @@ public class Cli {
     .build(); 
 
   private Option optionStrip = new Option("T", "trim", false, "trim new line and comma symbol, " +
-          "the \\r|\\n will be trimed  and comma (,) will be replaced by :");
+          "the \\r|\\n will be trimed  and comma (,) will be replaced by :, ONLY for jhxt");
+
+  private Option optionBq = new Option("B", "bq", false, "trim new line and symbol ^ ONLY for " +
+          "biaoqian");
 
   public Cli(String[] args) throws ParseException {
     options.addOption( optionHelp );
@@ -80,6 +86,7 @@ public class Cli {
     options.addOption( optionUser);
     options.addOption( optionPassword);
     options.addOption( optionStrip);
+    options.addOption( optionBq);
 
     CommandLineParser parser = new DefaultParser();
     CommandLine cmd = parser.parse( options, args);
@@ -131,6 +138,9 @@ public class Cli {
       if (cmd.hasOption(optionStrip.getOpt())) {
         trim = true;
       }
+      if (cmd.hasOption(optionBq.getOpt())) {
+        bq = true;
+      }
     } // end else
   }
 
@@ -164,6 +174,8 @@ public class Cli {
   }
 
   public boolean trim() { return trim; }
+
+  public boolean bq() {return bq; }
 
   public void usage() {
     System.out.println(

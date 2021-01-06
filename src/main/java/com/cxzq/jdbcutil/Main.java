@@ -1,5 +1,9 @@
 package com.cxzq.jdbcutil;
 
+import org.apache.commons.cli.ParseException;
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVPrinter;
+
 import java.io.IOException;
 import java.sql.Clob;
 import java.sql.Connection;
@@ -10,77 +14,104 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Properties;
 
-import org.apache.commons.cli.ParseException;
-import org.apache.commons.csv.CSVFormat;
-import org.apache.commons.csv.CSVPrinter;
+public class Main
+{
 
-public class Main {
+    public final static int exit_status_err = 1;
 
-  public final static int exit_status_err = 1;
+    public static void main(String[] args)
+            throws ParseException, IOException
+    {
 
-  public static void main(String[] args) throws ParseException, IOException {
+        Cli cli = new Cli(args);
+        try {
+            Properties connectProps = new Properties();
+            connectProps.put("user", cli.getUser());
+            connectProps.put("password", cli.getPassword());
+            Connection conn = DriverManager.getConnection(cli.getJdbcUrl(), connectProps);
+            Statement stmt = conn.createStatement();
+            ResultSet resSet;
+            if (stmt.execute(cli.getQuery())) {
+                resSet = stmt.getResultSet();
 
-    Cli cli = new Cli(args);
-    try {
-      Properties connectProps = new Properties();
-      connectProps.put("user", cli.getUser());
-      connectProps.put("password", cli.getPassword());
-      Connection conn = DriverManager.getConnection(cli.getJdbcUrl(), connectProps);
-      Statement stmt = conn.createStatement();
-      ResultSet resSet;
-      if (stmt.execute(cli.getQuery())) {
-        resSet = stmt.getResultSet();
-
-        boolean isRaw = cli.isRaw();
-        if (isRaw) {
-          ResultSetMetaData rsmd = resSet.getMetaData();
-          int columnsNumber = rsmd.getColumnCount();
-            while (resSet.next()) {
-              for(int i=1; i<= columnsNumber; i++) {
-                if (resSet.getString(i) != null) {
-                  System.out.print(resSet.getString(i));
+                boolean isRaw = cli.isRaw();
+                if (isRaw) {
+                    ResultSetMetaData rsmd = resSet.getMetaData();
+                    int columnsNumber = rsmd.getColumnCount();
+                    while (resSet.next()) {
+                        for (int i = 1; i <= columnsNumber; i++) {
+                            if (resSet.getString(i) != null) {
+                                System.out.print(resSet.getString(i));
+                            }
+                        }
+                        System.out.println();
+                    }
                 }
-              }
-              System.out.println();
+                else {
+                    CSVFormat csvFormat = cli.getCsvFormat();
+                    if (!cli.isHideHeaders()) {
+                        csvFormat.withHeader(resSet).print(System.out);
+                    }
+
+                    CSVPrinter csvPrint = new CSVPrinter(System.out, csvFormat);
+                    if (cli.trim()) {
+                        int columnCount = resSet.getMetaData().getColumnCount();
+                        StringBuilder sb = new StringBuilder();
+                        while (resSet.next()) {
+                            for (int i = 1; i <= columnCount; ++i) {
+                                Object object = resSet.getObject(i);
+                                String res;
+                                if (object instanceof Clob) {
+                                    res = ((Clob) object).getCharacterStream().toString();
+                                }
+                                else {
+                                    res = object.toString();
+                                }
+                                sb.append(res.replace("\r", "").replace("\n", "").replace(",", ":"));
+                                if (i < columnCount) {
+                                    sb.append(",");
+                                }
+                            }
+                            System.out.println(sb.toString());
+                        }
+                    } // end --trim
+                    else if (cli.bq()) {
+                        // for biaoqian system
+                        // 去掉源字段中的  ^和换行符
+                        int columnCount = resSet.getMetaData().getColumnCount();
+                        StringBuilder sb = new StringBuilder();
+                        while (resSet.next()) {
+                            for (int i = 1; i <= columnCount; ++i) {
+                                Object object = resSet.getObject(i);
+                                String res;
+                                if (object instanceof Clob) {
+                                    res = ((Clob) object).getCharacterStream().toString();
+                                }
+                                else {
+                                    res = object.toString();
+                                }
+                                sb.append(res.replace("\r", "").replace("\n", "").replace("^",
+                                        ""));
+                                if (i < columnCount) {
+                                    sb.append("^");
+                                }
+                            }
+                            System.out.println(sb.toString());
+                        }
+                    }
+                    else {
+                        csvPrint.printRecords(resSet);
+                    }
+                    csvPrint.flush();
+                    csvPrint.close();
+                }
             }
-        } else {
-          CSVFormat csvFormat = cli.getCsvFormat();
-          if (!cli.isHideHeaders())
-            csvFormat.withHeader(resSet).print(System.out);
-
-          CSVPrinter csvPrint = new CSVPrinter(System.out, csvFormat);
-          if (cli.trim()) {
-            int columnCount = resSet.getMetaData().getColumnCount();
-            StringBuilder sb = new StringBuilder();
-            while(resSet.next()) {
-              for(int i = 1; i <= columnCount; ++i) {
-                Object object = resSet.getObject(i);
-                String res;
-                if (object instanceof  Clob) {
-                  res = ((Clob)object).getCharacterStream().toString();
-                } else {
-                  res = object.toString();
-                }
-                sb.append(res.replace("\r","").replace("\n","").replace(",",":"));
-                if (i < columnCount) {
-                  sb.append(",");
-                }
-              }
-              System.out.println(sb.toString());
-//              csvPrint.println();
-            }
-          }else {
-            csvPrint.printRecords(resSet);
-          }
-          csvPrint.flush();
-          csvPrint.close();
+            conn.close();
+            System.exit(0);
         }
-      }
-      conn.close();
-      System.exit(0);
-    } catch (SQLException ex) {
-        System.err.println( ex.getMessage() );
-        System.exit(exit_status_err);
+        catch (SQLException ex) {
+            System.err.println(ex.getMessage());
+            System.exit(exit_status_err);
+        }
     }
-  }
 }
