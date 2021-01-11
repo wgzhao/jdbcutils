@@ -12,6 +12,9 @@ import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.sql.Types;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Properties;
 
 public class Main
@@ -19,6 +22,7 @@ public class Main
 
     public static final int EXIT_STATUS_ERR = 1;
     private static CSVFormat csvFormat;
+    private static boolean hiddenHeader = false;
 
     /**
      * 原始格式输出，用于tuna工具
@@ -48,11 +52,14 @@ public class Main
      * @throws SQLException SQL 异常
      */
     private static void trimOutput(ResultSet resultSet)
-            throws SQLException
+            throws SQLException, IOException
     {
-        String sep = ",";
+        char sep = ',';
         int columnCount = resultSet.getMetaData().getColumnCount();
         StringBuilder sb = new StringBuilder();
+        if (!hiddenHeader) {
+            csvFormat.withHeader(resultSet).withDelimiter(sep).print(System.out); // NOSONAR
+        }
         while (resultSet.next()) {
             for (int i = 1; i <= columnCount; ++i) {
                 Object object = resultSet.getObject(i);
@@ -83,24 +90,31 @@ public class Main
      * @throws SQLException SQL 异常
      */
     private static void bqOutput(ResultSet resultSet)
-            throws SQLException
+            throws SQLException, IOException
     {
-        String sep = "^"; // 分隔符
+        char sep = '^'; // 分隔符
         int columnCount = resultSet.getMetaData().getColumnCount();
         StringBuilder sb = new StringBuilder();
+        if (!hiddenHeader) {
+            csvFormat.withHeader(resultSet).withDelimiter(sep).print(System.out); // NOSONAR
+        }
+        // 首先，把需要替换的字段提取出来，后续循环就不再需要逐一判断了
+        HashMap<Integer, Boolean> needConvert = new HashMap<>(columnCount);
+
+        for (int i = 1; i <= columnCount; i++) {
+            int type = resultSet.getMetaData().getColumnType(i);
+            needConvert.put(i, type == Types.VARCHAR || type == Types.CLOB);
+        }
         while (resultSet.next()) {
             for (int i = 1; i <= columnCount; i++) {
                 Object object = resultSet.getObject(i);
-                if (object != null) {
-                    String res;
-                    if (object instanceof Clob) {
-                        res = ((Clob) object).getCharacterStream().toString();
-                    }
-                    else {
-                        res = object.toString();
-                    }
-                    sb.append(res.replace("\r", "").replace("\n", "").replace("^",
+                // only varchar and clob need trim
+                if (object != null && needConvert.get(i)) {
+                    sb.append(object.toString().replace("\r", "").replace("\n", "").replace("^",
                             ""));
+                }
+                else {
+                    sb.append(object);
                 }
                 if (i < columnCount) {
                     sb.append(sep);
@@ -121,6 +135,9 @@ public class Main
     private static void stdCsvOutput(ResultSet resultSet)
             throws IOException, SQLException
     {
+        if (!hiddenHeader) {
+            csvFormat.withHeader(resultSet).print(System.out); // NOSONAR
+        }
         CSVPrinter csvPrint = new CSVPrinter(System.out, csvFormat); // NOSONAR
         csvPrint.printRecords(resultSet);
         csvPrint.flush();
@@ -137,17 +154,16 @@ public class Main
         try (Connection conn = DriverManager.getConnection(cli.getJdbcUrl(), connectProps);
                 Statement stmt = conn.createStatement()) {
             ResultSet resSet;
+            stmt.setFetchSize(cli.getFetchSize());
             if (stmt.execute(cli.getQuery())) {
                 resSet = stmt.getResultSet();
                 // raw 模式下，不调用CSV格式，直接原始内容输出
                 if (cli.isRaw()) {
                     rawOutput(resSet);
-                    return ;
+                    return;
                 }
                 csvFormat = cli.getCsvFormat();
-                if (!cli.isHideHeaders()) {
-                    csvFormat.withHeader(resSet).print(System.out); // NOSONAR
-                }
+                hiddenHeader = cli.isHideHeaders();
                 if (cli.isBq()) {
                     bqOutput(resSet);
                 }
