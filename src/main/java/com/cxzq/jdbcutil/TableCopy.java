@@ -2,6 +2,7 @@ package com.cxzq.jdbcutil;
 
 import cn.hutool.json.JSON;
 
+
 import java.io.File;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
@@ -82,15 +83,6 @@ public class TableCopy
                 System.exit(2);
             }
         }
-        else if (srcJdbc.contains("inceptor2")) {
-            try {
-                Class.forName("org.apache.hive.jdbc.HiveDriver");
-            }
-            catch (ClassNotFoundException e) {
-                e.printStackTrace();
-                System.exit(3);
-            }
-        }
         Connection srcConn = DriverManager.getConnection(srcJdbc, srcConnectProps);
         System.out.println(" OK");
         Statement srcStmt = srcConn.createStatement();
@@ -99,13 +91,16 @@ public class TableCopy
         System.out.print("Connect destination db with: " + destJdbc);
         System.out.println(" OK");
         Connection destConn = DriverManager.getConnection(destJdbc, destConnectProps);
+        destConn.setAutoCommit(false);
         Statement destStmt = destConn.createStatement();
+
 
         if ("overwrite".equals(mode)) {
             destStmt.execute("truncate table " + job.getByPath("dest.dbtable", String.class));
+            destConn.commit();
         }
 
-        if (preSql != null) {
+        if (preSql != null && ! Objects.requireNonNull(preSql).trim().isEmpty()) {
             System.out.print("execute pre-sql on dest db: " + preSql);
             destStmt.execute(preSql);
             System.out.println(" OK");
@@ -170,9 +165,10 @@ public class TableCopy
         preparedStmt.executeBatch();
         destConn.commit();
         System.out.println(" OK ");
-        if (postSql != null) {
+        if (postSql != null && ! Objects.requireNonNull(postSql).trim().isEmpty()) {
             System.out.print("Execute post-sql on dest db: " + postSql);
             destStmt.execute(postSql);
+            destConn.commit();
             System.out.println(" OK");
         }
         destConn.close();
