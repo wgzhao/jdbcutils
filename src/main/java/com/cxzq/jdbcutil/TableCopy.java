@@ -27,6 +27,8 @@ public class TableCopy
     private String destJdbc;
     private String destTable;
     private String mode;
+    private String preSql;
+    private String postSql;
 
     /**
      * 提取所有的字段名称，并按照逗号拼接
@@ -56,6 +58,9 @@ public class TableCopy
         destJdbc = json.getByPath("dest.jdbc", String.class);
         destTable = json.getByPath("dest.dbtable", String.class);
         mode = json.getByPath("dest.mode", String.class);
+        //presql
+        preSql = json.getByPath("dest.presql", String.class);
+        postSql = json.getByPath("dest.postsql", String.class);
         destConnectProps.put("user", json.getByPath("dest.user", String.class));
         destConnectProps.put("password", json.getByPath("dest.password", String.class));
 
@@ -63,9 +68,9 @@ public class TableCopy
         srcConnectProps.put("password", json.getByPath("src.password", String.class));
     }
 
-    private void copyRecords(JSON job) throws SQLException
+    private void copyRecords(JSON job)
+            throws SQLException
     {
-
         // source database
         System.out.print("Connect source db with: " + srcJdbc);
         if (srcJdbc.contains("clickhouse")) {
@@ -76,10 +81,12 @@ public class TableCopy
                 e.printStackTrace();
                 System.exit(2);
             }
-        } else if (srcJdbc.contains("inceptor2")) {
+        }
+        else if (srcJdbc.contains("inceptor2")) {
             try {
                 Class.forName("org.apache.hive.jdbc.HiveDriver");
-            } catch (ClassNotFoundException e) {
+            }
+            catch (ClassNotFoundException e) {
                 e.printStackTrace();
                 System.exit(3);
             }
@@ -96,6 +103,12 @@ public class TableCopy
 
         if ("overwrite".equals(mode)) {
             destStmt.execute("truncate table " + job.getByPath("dest.dbtable", String.class));
+        }
+
+        if (preSql != null) {
+            System.out.print("execute pre-sql on dest db: " + preSql);
+            destStmt.execute(preSql);
+            System.out.println(" OK");
         }
 
         String insertSql = "insert into " + destTable;
@@ -157,9 +170,13 @@ public class TableCopy
         preparedStmt.executeBatch();
         destConn.commit();
         System.out.println(" OK ");
+        if (postSql != null) {
+            System.out.print("Execute post-sql on dest db: " + postSql);
+            destStmt.execute(postSql);
+            System.out.println(" OK");
+        }
         destConn.close();
         srcConn.close();
-
     }
 
     public static void main(String[] args)
@@ -174,7 +191,8 @@ public class TableCopy
         tc.processConn(job);
         try {
             tc.copyRecords(job);
-        } catch (SQLException e) {
+        }
+        catch (SQLException e) {
             e.printStackTrace();
             System.exit(1);
         }
