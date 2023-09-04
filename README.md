@@ -1,56 +1,38 @@
-# jdbcutil.jar
+# jdbcutil
+
+A util to connect and manage popular RDBMS
 
 ## 1. Help
 
 ```shell
-$ java -jar jdbcutil-1.0.0.jar
-jdbcutil execute queries in diferent databases such as mysql, oracle, postgresql and etc.
-Query with resultset output over stdout in CSV format.
+$ java -jar jdbcutil-<version>-shaded.jar
+Usage: jdbcutil [COMMAND]
+A util to connect and manage popular RDBMS
+Commands:
+  sql        execute queries in different databases such as mysql, oracle,
+               postgresql and etc.
+             Query with resultSet output over stdout in CSV format.
 
-usage: jdbcutil [OPTION]... SQL
- -f,--csv-format <FORMAT>     Output CSV format with possibale values:
-                              Default, Excel, InformixUnload,
-                              InformixUnloadCsv, MongoDBCsv, MongoDBTsv,
-                              MySQL, Oracle, PostgreSQLCsv,
-                              PostgreSQLText, RFC4180 and TDF. Default
-                              format is "Default".
- -h,--help                    show this help, then exit
- -H,--hide-headers            hide headers on output
- -u,--jdbc-url <URL STRING>   JDBC driver connection URL string
-
+  tableCopy  copy data between different databases
 ```
 
-## 2. Postgresql connection example (postgresql-9.3-1102-jdbc4.jar required)
+## sql subcommand
+
+the `sql` subcommand allow you to execute queries in different databases such as mysql, oracle, postgresql and etc.
+you can put all RDBMS jdbc driver jars in a directory, and use `-Djava.ext.dirs=<your driver path>` to specify the driver path.
 
 ```shell
-$ java -cp postgresql-9.3-1102-jdbc4.jar:jdbcutil-1.0.0.jar com.cxzq.jdbcutil.Main \
+$ java -Djava.ext.dirs=<your jdbc drivers path>  -jar jdbcutil-<version>-shaded.jar sql \
     -f PostgreSQLText \
-    -u 'jdbc:postgresql://host:port/dbname?user=postgres&password=secretkey' \
+    -U 'jdbc:postgresql://host:port/dbname' \
+    -u postgres \
+    -p secretkey \
     'select version()'
-
 ```
 
+##  tableCopy subcommand
 
-## 3. Oracle connection example (ojdbc8-12.2.0.1.jar required)
-
-```shell
-$ java -cp ojdbc8-12.2.0.1.jar:jdbcutil-1.0.0.jar com.cxzq.jdbcutil.Main \
-    -u 'jdbc:oracle:thin:<user>/<password>@host:port:dbname' \
-    'select * from V$VERSION'
-
-```
-
-
-## 4. mysql connection example (mysql-connector-java-8.0.18.jar required)
-
-```shell
-$ java -cp mysql-connector-java-8.0.18.jar:jdbcutil-1.0.0.jar com.cxzq.jdbcutil.Main \
-    -u 'jdbc:mysql://user:password@host:port/dbname' \
-    'SHOW VARIABLES LIKE "%version%"'
-
-```
-
-## 5. Copy table from a database to another database 
+the `tableCopy` subcommand allow you to copy table from a database to another. 
 
 First, create a json file `sample.json` , like the following:
 
@@ -67,14 +49,15 @@ First, create a json file `sample.json` , like the following:
         "user": "mysql",
         "password": "password",
         "dbtable": "tbl",
-        "mode": "overwrite"
+        "mode": "overwrite",
+        "preSql": "",
+        "postSql": ""
     }
 }
 ```
+
 then, run the following command 
 
 ```shell script
-java -cp ojdbc8-12.2.0.1.jar:ojdbc8-12.2.0.1.jar:jdbcutil-1.0.0.jar \
-  com.cxzq.jdbcutil.TableCopy \
-  ./sample.json
+java -Djava.ext.dirs=<your jdbc drivers path> -jar jdbcutil-<version>-shaded.jar tableCopy ./sample.json
 ```

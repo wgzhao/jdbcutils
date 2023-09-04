@@ -1,10 +1,9 @@
-package com.cxzq.jdbcutil;
+package com.wgzhao.jdbcutils;
 
 import cn.hutool.json.JSON;
-
+import picocli.CommandLine;
 
 import java.io.File;
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -17,10 +16,17 @@ import java.sql.Types;
 import java.util.Objects;
 import java.util.Properties;
 import java.util.StringJoiner;
+import java.util.concurrent.Callable;
 
 import static cn.hutool.json.JSONUtil.readJSON;
 
-public class TableCopy
+@CommandLine.Command(
+        name = "tableCopy",
+        mixinStandardHelpOptions = true,
+        version = "jdbcutil 1.0",
+        description = "copy data between different databases"
+)
+public class TableCopy implements Callable<Integer>
 {
     private Properties srcConnectProps;
     private Properties destConnectProps;
@@ -30,6 +36,25 @@ public class TableCopy
     private String mode;
     private String preSql;
     private String postSql;
+
+    @CommandLine.Parameters(index = "0", description = "json file, here is a example: \n " + "{\n" +
+            "    \"src\": {\n" +
+            "        \"jdbc\": \"jdbc:oracle:thin:@127.0.0.1:1521/orcl\",\n" +
+            "        \"user\": \"oracle\",\n" +
+            "        \"password\": \"password\",\n" +
+            "        \"sql\": \"select * from mytable\"\n" +
+            "    },\n" +
+            "    \"dest\": {\n" +
+            "        \"jdbc\": \"jdbc:mysql://127.0.0.1:3306/test\",\n" +
+            "        \"user\": \"mysql\",\n" +
+            "        \"password\": \"password\",\n" +
+            "        \"dbtable\": \"tbl\",\n" +
+            "        \"mode\": \"overwrite\",\n" +
+            "        \"preSql\": \"\",\n" +
+            "        \"postSql\": \"\"\n" +
+            "    }\n" +
+            "}")
+    private File jsonFile;
 
     /**
      * 提取所有的字段名称，并按照逗号拼接
@@ -140,7 +165,7 @@ public class TableCopy
             joinerv.add("?");
         }
 
-        insertSql = insertSql + "(" + joinerc.toString() + ")values(" + joinerv.toString() + ")";
+        insertSql = insertSql + "(" + joinerc + ")values(" + joinerv + ")";
         PreparedStatement preparedStmt = destConn.prepareStatement(insertSql);
 
         int batchSize = 0;
@@ -175,22 +200,17 @@ public class TableCopy
         srcConn.close();
     }
 
-    public static void main(String[] args)
+    @Override
+    public Integer call() throws Exception
     {
-        if (args.length < 1) {
-            System.out.println("json file missing");
-            System.exit(1);
-        }
-        Charset charset = StandardCharsets.UTF_8;
-        JSON job = readJSON(new File(args[0]), charset);
+        JSON job = readJSON(jsonFile, StandardCharsets.UTF_8);
         TableCopy tc = new TableCopy();
         tc.processConn(job);
-        try {
-            tc.copyRecords(job);
-        }
-        catch (SQLException e) {
-            e.printStackTrace();
-            System.exit(1);
-        }
+        tc.copyRecords(job);
+        return 0;
+    }
+    public static void main(String[] args) {
+        int exitCode = new CommandLine(new TableCopy()).execute(args);
+        System.exit(exitCode);
     }
 }

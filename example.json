@@ -1,0 +1,17 @@
+{
+   "src": {
+       "jdbc": "jdbc:oracle:thin:@127.0.0.1:1521/orcl",
+       "user": "oracle",
+       "password": "password",
+       "sql": "select * from mytable"
+   },
+   "dest": {
+       "jdbc": "jdbc:mysql://127.0.0.1:3306/test",
+       "user": "mysql",
+       "password": "password",
+       "dbtable": "tbl",
+       "mode": "overwrite",
+       "preSql": "",
+       "postSql": ""
+   }
+}
