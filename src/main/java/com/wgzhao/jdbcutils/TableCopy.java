@@ -17,8 +17,10 @@ import java.util.Objects;
 import java.util.Properties;
 import java.util.StringJoiner;
 import java.util.concurrent.Callable;
+import java.util.logging.Logger;
 
 import static cn.hutool.json.JSONUtil.readJSON;
+import static java.util.logging.Level.WARNING;
 
 @CommandLine.Command(
         name = "tableCopy",
@@ -28,6 +30,7 @@ import static cn.hutool.json.JSONUtil.readJSON;
 )
 public class TableCopy implements Callable<Integer>
 {
+    private static Logger logger = Logger.getLogger(TableCopy.class.getName());
     private Properties srcConnectProps;
     private Properties destConnectProps;
     private String srcJdbc;
@@ -69,7 +72,7 @@ public class TableCopy implements Callable<Integer>
             return joiner.toString();
         }
         catch (SQLException e) {
-            e.printStackTrace();
+            logger.log(WARNING, "getColumns error", e);
             return null;
         }
     }
@@ -104,7 +107,7 @@ public class TableCopy implements Callable<Integer>
                 Class.forName("ru.yandex.clickhouse.ClickHouseDriver");
             }
             catch (ClassNotFoundException e) {
-                e.printStackTrace();
+                logger.log(WARNING, "ClassNotFoundException", e);
                 System.exit(2);
             }
         }

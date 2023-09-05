@@ -8,7 +8,14 @@ import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 
 import java.io.IOException;
-import java.sql.*;
+import java.sql.Clob;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.sql.Types;
 import java.util.HashMap;
 import java.util.Properties;
 import java.util.concurrent.Callable;
@@ -130,7 +137,7 @@ public class Sql implements Callable<Integer> {
      * @throws SQLException SQL 异常
      */
     private void bqOutput(ResultSet resultSet)
-            throws SQLException, IOException {
+            throws SQLException {
         char sep = '^'; // 分隔符
         int columnCount = resultSet.getMetaData().getColumnCount();
         StringBuilder sb = new StringBuilder();
