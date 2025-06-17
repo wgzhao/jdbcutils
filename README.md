@@ -34,7 +34,7 @@ $ java -Djava.ext.dirs=<your jdbc drivers path>  -jar jdbcutil-<version>-shaded.
 
 the `tableCopy` subcommand allow you to copy table from a database to another. 
 
-First, create a json file `sample.json` , like the following:
+First, create a JSON file `sample.json` , like the following:
 
 ```json
 {
@@ -60,4 +60,48 @@ then, run the following command
 
 ```shell script
 java -Djava.ext.dirs=<your jdbc drivers path> -jar jdbcutil-<version>-shaded.jar tableCopy ./sample.json
+```
+
+## hiveSchema subcommand
+
+the `hiveSchema` subcommand allow you to generate a hive schema from a table in a database.
+
+```shell
+java -jar jdbcutils-<version>-jar-with-dependencies.jar hiveSchema \
+  -U jdbc:mysql://localhost -u username -p password  \
+  -d link_scrm  -t qw_customer \
+  -D odsc2 -T qw_customer \
+  --partition-name=dt --partition-type=int
+  --hdfs-path=/ods/odscs2  
+```
+
+it will print the hive table DDL SQL, like the following:
+
+```sql
+CREATE EXTERNAL TABLE odsc2.qw_customer (
+  id STRING,
+  qw_customer_id INT,
+  external_userid STRING,
+  name STRING,
+  avatar STRING,
+  type STRING,
+  gender STRING,
+  unionid STRING,
+  position STRING,
+  corp_name STRING,
+  follow_user_userid STRING,
+  follow_user_remark STRING,
+  follow_user_description STRING,
+  follow_user_createtime STRING,
+  follow_user_add_way STRING,
+  follow_user_state STRING,
+  create_time STRING,
+  corpid STRING,
+  del_follow_user INT,
+  del_external_contact INT,
+  channel_id INT
+)
+partitioned by ( dt int)
+stored as ORC
+location '/ods/odscs2/qw_customer'
 ```
