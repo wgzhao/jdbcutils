@@ -5,7 +5,7 @@ import picocli.CommandLine;
 import picocli.CommandLine.Command;
 
 
-@Command(name = "jdbcutil", subcommands = {Sql.class, TableCopy.class}, description = "A util to connect and manage popular RDBMS")
+@Command(name = "jdbcutil", subcommands = {Sql.class, TableCopy.class, HiveSchema.class}, description = "A util to connect and manage popular RDBMS")
 public class JdbcUtils
 {
     public static void main(String[] args)

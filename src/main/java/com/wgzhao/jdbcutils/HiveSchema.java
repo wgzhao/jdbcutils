@@ -9,7 +9,7 @@ import java.util.Properties;
 import java.util.concurrent.Callable;
 
 @Command(
-        name = "hive-schema",
+        name = "hiveSchema",
         mixinStandardHelpOptions = true,
         version = "1.0",
         description = "Generate Hive table creation SQL from an RDBMS table."
@@ -80,7 +80,7 @@ public class HiveSchema implements Callable<Integer>
             DatabaseMetaData metaData = conn.getMetaData();
             try (ResultSet columns = metaData.getColumns(null, null, tableName, null)) {
                 StringBuilder createTableSQL = new StringBuilder();
-                createTableSQL.append("CREATE TABLE ").append(hiveDatabaseOption).append(".").append(hiveTable).append(" (\n");
+                createTableSQL.append("CREATE EXTERNAL TABLE ").append(hiveDatabaseOption).append(".").append(hiveTable).append(" (\n");
                 StringBuilder addaxColumn = new StringBuilder();
                 boolean firstColumn = true;
                 while (columns.next()) {
@@ -114,7 +114,7 @@ public class HiveSchema implements Callable<Integer>
                 createTableSQL.append("stored as ").append(storage).append("\n");
                 // Add hdfs path
                 if (hdfsPath != null) {
-                    createTableSQL.append("location '").append(hdfsPath).append("'\n");
+                    createTableSQL.append("location '").append(hdfsPath).append("/").append(hiveTable).append("'\n");
                 }
                 System.out.println(createTableSQL);
 
